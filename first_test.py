@@ -889,98 +889,98 @@ with tabs[5]:  # "匹配分析" Tab
             st.info("请选择一个神将星级。")
 # ... (后续的探索性分析 Tab 和 筛选后原始数据 Tab) ...
 
-with tabs[6]:  # 新的 "探索性分析" Tab 的索引是 6
-    st.subheader("自由探索性数据分析")
+# with tabs[6]:  # 新的 "探索性分析" Tab 的索引是 6
+#     st.subheader("自由探索性数据分析")
 
-    if filtered_df.empty:
-        st.info("请先通过侧边栏筛选数据，或确保有数据符合当前筛选条件。")
-        st.stop()  # 如果没有数据，探索也无从谈起
+#     if filtered_df.empty:
+#         st.info("请先通过侧边栏筛选数据，或确保有数据符合当前筛选条件。")
+#         st.stop()  # 如果没有数据，探索也无从谈起
 
-    st.write("当前已筛选数据行数:", len(filtered_df))
-    st.dataframe(filtered_df.head())  # 显示筛选后数据的前几行作为参考
+#     st.write("当前已筛选数据行数:", len(filtered_df))
+#     st.dataframe(filtered_df.head())  # 显示筛选后数据的前几行作为参考
 
-    st.markdown("---")
-    st.write("#### 1. 查看列的描述性统计")
+#     st.markdown("---")
+#     st.write("#### 1. 查看列的描述性统计")
 
-    # 获取所有列名作为选项 (数值型和非数值型都可以用 describe)
-    all_columns = filtered_df.columns.tolist()
-    selected_column_for_describe = st.selectbox(
-        "选择一列查看描述性统计:",
-        options=all_columns,
-        key="desc_col_select"  # 给组件一个唯一的key
-    )
-    if selected_column_for_describe:
-        try:
-            st.write(f"**'{selected_column_for_describe}' 列的描述性统计:**")
-            st.dataframe(filtered_df[selected_column_for_describe].describe(include='all'))  # include='all' 对非数值型也有效
-        except Exception as e:
-            st.error(f"计算描述性统计时出错: {e}")
+#     # 获取所有列名作为选项 (数值型和非数值型都可以用 describe)
+#     all_columns = filtered_df.columns.tolist()
+#     selected_column_for_describe = st.selectbox(
+#         "选择一列查看描述性统计:",
+#         options=all_columns,
+#         key="desc_col_select"  # 给组件一个唯一的key
+#     )
+#     if selected_column_for_describe:
+#         try:
+#             st.write(f"**'{selected_column_for_describe}' 列的描述性统计:**")
+#             st.dataframe(filtered_df[selected_column_for_describe].describe(include='all'))  # include='all' 对非数值型也有效
+#         except Exception as e:
+#             st.error(f"计算描述性统计时出错: {e}")
 
-    st.markdown("---")
-    st.write("#### 2. 简单双变量图表")
+#     st.markdown("---")
+#     st.write("#### 2. 简单双变量图表")
 
-    # 获取数值型列用于 x, y 轴和颜色/大小等
-    numeric_cols_for_plot = filtered_df.select_dtypes(include=['number']).columns.tolist()
-    # 获取类别型/对象型列用于 x 轴 (类别) 或颜色/分组等
-    categorical_cols_for_plot = filtered_df.select_dtypes(include=['object', 'category', 'bool']).columns.tolist()
+#     # 获取数值型列用于 x, y 轴和颜色/大小等
+#     numeric_cols_for_plot = filtered_df.select_dtypes(include=['number']).columns.tolist()
+#     # 获取类别型/对象型列用于 x 轴 (类别) 或颜色/分组等
+#     categorical_cols_for_plot = filtered_df.select_dtypes(include=['object', 'category', 'bool']).columns.tolist()
 
-    col1_plot, col2_plot, col3_plot = st.columns(3)
-    with col1_plot:
-        x_axis_col = st.selectbox("选择 X 轴 (通常是类别或数值):", options=['无'] + all_columns, key="x_axis")
-    with col2_plot:
-        y_axis_col = st.selectbox("选择 Y 轴 (通常是数值):", options=['无'] + numeric_cols_for_plot, key="y_axis")
-    with col3_plot:
-        chart_type = st.selectbox("选择图表类型:", ["条形图", "散点图", "箱线图", "直方图"], key="chart_type")
+#     col1_plot, col2_plot, col3_plot = st.columns(3)
+#     with col1_plot:
+#         x_axis_col = st.selectbox("选择 X 轴 (通常是类别或数值):", options=['无'] + all_columns, key="x_axis")
+#     with col2_plot:
+#         y_axis_col = st.selectbox("选择 Y 轴 (通常是数值):", options=['无'] + numeric_cols_for_plot, key="y_axis")
+#     with col3_plot:
+#         chart_type = st.selectbox("选择图表类型:", ["条形图", "散点图", "箱线图", "直方图"], key="chart_type")
 
-    color_col = st.selectbox("选择颜色分组依据 (可选, 类别型列):",
-                             options=['无'] + categorical_cols_for_plot + numeric_cols_for_plot, key="color_axis")
+#     color_col = st.selectbox("选择颜色分组依据 (可选, 类别型列):",
+#                              options=['无'] + categorical_cols_for_plot + numeric_cols_for_plot, key="color_axis")
 
-    # 只有当 X 轴和 Y 轴（对于需要Y轴的图表）都被选择时才绘图
-    can_plot = False
-    if chart_type in ["条形图", "散点图", "箱线图"] and x_axis_col != '无' and y_axis_col != '无':
-        can_plot = True
-    elif chart_type == "直方图" and x_axis_col != '无':  # 直方图只需要 X 轴
-        can_plot = True
+#     # 只有当 X 轴和 Y 轴（对于需要Y轴的图表）都被选择时才绘图
+#     can_plot = False
+#     if chart_type in ["条形图", "散点图", "箱线图"] and x_axis_col != '无' and y_axis_col != '无':
+#         can_plot = True
+#     elif chart_type == "直方图" and x_axis_col != '无':  # 直方图只需要 X 轴
+#         can_plot = True
 
-    if can_plot:
-        try:
-            fig_explore = None
-            title_explore = f"{chart_type}: '{x_axis_col}' vs '{y_axis_col if y_axis_col != '无' else ''}'"
-            if color_col != '无':
-                title_explore += f" (按 '{color_col}' 分色)"
+#     if can_plot:
+#         try:
+#             fig_explore = None
+#             title_explore = f"{chart_type}: '{x_axis_col}' vs '{y_axis_col if y_axis_col != '无' else ''}'"
+#             if color_col != '无':
+#                 title_explore += f" (按 '{color_col}' 分色)"
 
-            plot_kwargs = {'x': x_axis_col, 'title': title_explore}
-            if color_col != '无':
-                plot_kwargs['color'] = color_col
+#             plot_kwargs = {'x': x_axis_col, 'title': title_explore}
+#             if color_col != '无':
+#                 plot_kwargs['color'] = color_col
 
-            if chart_type == "条形图":
-                # 条形图通常 X 是类别, Y 是数值的聚合 (如均值、总和)
-                # 这里我们简化为直接画，如果X是类别，Y是数值，Pandas绘图后端会自动处理
-                # 或者我们需要用户选择聚合方式
-                # 为简单起见，我们假设用户会选择合适的X和Y
-                # 如果X是类别，Y是数值，Plotly Express 的 bar 会默认求和或计数（取决于y的数据类型）
-                # 为了得到均值，需要预先 groupby
-                # st.caption("提示: 条形图若X为类别，Y为数值，默认显示Y的总和或计数。如需均值等，需额外处理。")
-                fig_explore = px.bar(filtered_df, y=y_axis_col, **plot_kwargs)
-            elif chart_type == "散点图":
-                fig_explore = px.scatter(filtered_df, y=y_axis_col, **plot_kwargs)
-            elif chart_type == "箱线图":
-                # 箱线图通常 X 是类别, Y 是数值
-                fig_explore = px.box(filtered_df, y=y_axis_col, **plot_kwargs)
-            elif chart_type == "直方图":
-                # 直方图只需要 X 轴 (数值型)
-                if x_axis_col in numeric_cols_for_plot:
-                    plot_kwargs.pop('y', None)  # 移除 y (如果存在)
-                    fig_explore = px.histogram(filtered_df, **plot_kwargs)
-                else:
-                    st.warning(f"直方图的 X 轴 ('{x_axis_col}') 应为数值型数据。")
+#             if chart_type == "条形图":
+#                 # 条形图通常 X 是类别, Y 是数值的聚合 (如均值、总和)
+#                 # 这里我们简化为直接画，如果X是类别，Y是数值，Pandas绘图后端会自动处理
+#                 # 或者我们需要用户选择聚合方式
+#                 # 为简单起见，我们假设用户会选择合适的X和Y
+#                 # 如果X是类别，Y是数值，Plotly Express 的 bar 会默认求和或计数（取决于y的数据类型）
+#                 # 为了得到均值，需要预先 groupby
+#                 # st.caption("提示: 条形图若X为类别，Y为数值，默认显示Y的总和或计数。如需均值等，需额外处理。")
+#                 fig_explore = px.bar(filtered_df, y=y_axis_col, **plot_kwargs)
+#             elif chart_type == "散点图":
+#                 fig_explore = px.scatter(filtered_df, y=y_axis_col, **plot_kwargs)
+#             elif chart_type == "箱线图":
+#                 # 箱线图通常 X 是类别, Y 是数值
+#                 fig_explore = px.box(filtered_df, y=y_axis_col, **plot_kwargs)
+#             elif chart_type == "直方图":
+#                 # 直方图只需要 X 轴 (数值型)
+#                 if x_axis_col in numeric_cols_for_plot:
+#                     plot_kwargs.pop('y', None)  # 移除 y (如果存在)
+#                     fig_explore = px.histogram(filtered_df, **plot_kwargs)
+#                 else:
+#                     st.warning(f"直方图的 X 轴 ('{x_axis_col}') 应为数值型数据。")
 
-            if fig_explore:
-                st.plotly_chart(fig_explore, use_container_width=True)
-        except Exception as e:
-            st.error(f"绘制图表时出错: {e}")
-    elif (x_axis_col != '无' or y_axis_col != '无'):  # 如果选了轴但不能画图
-        st.info("请为所选图表类型选择合适的 X 轴和 Y 轴。")
+#             if fig_explore:
+#                 st.plotly_chart(fig_explore, use_container_width=True)
+#         except Exception as e:
+#             st.error(f"绘制图表时出错: {e}")
+#     elif (x_axis_col != '无' or y_axis_col != '无'):  # 如果选了轴但不能画图
+#         st.info("请为所选图表类型选择合适的 X 轴和 Y 轴。")
 
 # ... (with tabs[5]: # 筛选后原始数据 Tab ... 及其后续代码) ...
 st.write('---')
