@@ -387,9 +387,7 @@ if 'datetime' in filtered_df.columns and weekday_weekend_filter:
 # --- 7. 使用 Tabs 展示不同的统计信息 ---
 st.header("详细统计分析")
 tab_titles = ["战场等级次数", "角色出现次数", "神将星级战场次数", "神将星级战场表现", "魔王阶数战场表现",
-              """"""
-              
-              "匹配分析","探索性分析"]
+             "匹配分析""]
 tabs = st.tabs(tab_titles)
 
 # ... (假设你的脚本的其他部分，如 import, COLUMN_MAPPINGS, 辅助函数, load_data,
