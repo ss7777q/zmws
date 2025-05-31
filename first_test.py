@@ -4,6 +4,7 @@ import sqlite3
 import os
 import re  # 用于 extract_boss_details
 import plotly.express as px  # 用于绘图
+st.set_page_config(layout="wide") # 如果你的Streamlit版本支持，可以取消注释
 
 # --- 0. 配置项和辅助函数 ---
 COLUMN_MAPPINGS = {
@@ -220,7 +221,6 @@ def load_data(db_path, table):
 df_original = load_data(db_file_path, table_name)
 
 # --- 4. Streamlit 页面内容 ---
-# st.set_page_config(layout="wide") # 如果你的Streamlit版本支持，可以取消注释
 st.title("zmws神魔数据")
 
 if df_original.empty:
