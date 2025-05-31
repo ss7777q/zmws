@@ -221,7 +221,7 @@ df_original = load_data(db_file_path, table_name)
 
 # --- 4. Streamlit 页面内容 ---
 # st.set_page_config(layout="wide") # 如果你的Streamlit版本支持，可以取消注释
-st.title("游戏数据分析与筛选")
+st.title("zmws神魔数据")
 
 if df_original.empty:
     st.warning("未能加载到数据，请检查数据库文件、表名或数据加载函数。")
