@@ -209,6 +209,15 @@ def load_data(db_path, table):
         else:
             print(f"警告: 列 '{time_col}' 在数据中未找到，无法进行时间筛选。")
             df['datetime'] = pd.Series(dtype='datetime64[ns]')
+        user_power_col = 'user_power' # 假设数据库中的列名是 user_power
+        if user_power_col in df.columns:
+            df[user_power_col] = pd.to_numeric(df[user_power_col], errors='coerce')
+            # 对于这个分析，我们会在使用时再 dropna()，这里先保持原样
+        else:
+            print(f"警告: 列 '{user_power_col}' 在数据中未找到。战力分析功能可能受限。")
+            df[user_power_col] = pd.Series(dtype='float') # 创建空列
+
+        print("数据加载和类型转换完成 (含版本号、时间、战力处理)。")
 
         return df
     except Exception as e:
@@ -884,7 +893,166 @@ with tabs[5]:  # "匹配分析" Tab
                 st.warning("无法进行分析三，因为魔王数据处理不完整或当前无魔王数据。")
         elif selected_hero_star_an3 is None:
             st.info("请选择一个神将星级。")
+    # ... (之前的代码，直到分析三的结束点，即 st.markdown("---") 之后) ...
+
+    st.markdown("---")  # 分析三和分析四之间的分隔
+
+    # --- 分析四: 特定战力区间神将匹配的魔王比例 ---
+    st.markdown("#### 4. 特定战力区间神将的魔王匹配分布")
+
+    user_power_col = 'user_power'  # 与 load_data 中一致
+    # 只对有战力数据的神将进行分析
+    heroes_with_power_df = current_heroes_df.dropna(subset=[user_power_col]).copy()
+
+    if heroes_with_power_df.empty or current_bosses_df.empty:  # current_bosses_df_an2 应该已经处理好了
+        st.info("需要有效的神将（含战力数据）和魔王数据才能进行此分析。")
+    elif 'boss_fullname_with_tier' not in current_bosses_df_an2.columns:
+        st.warning("无法进行分析四，因为魔王数据处理不完整。")
+    else:
+        min_power = int(heroes_with_power_df[user_power_col].min())
+        max_power = int(heroes_with_power_df[user_power_col].max())
+
+        if min_power >= max_power:
+            st.info("神将战力数据范围不足以进行区间分析。")
+        else:
+            st.write(f"当前神将战力数据范围: {min_power} - {max_power}")
+
+            col_range1, col_range2 = st.columns(2)
+            with col_range1:
+                selected_min_power = st.number_input("选择战力分析范围 - 最小值:",
+                                                     min_value=min_power, max_value=max_power,
+                                                     value=min_power, key="an4_min_power")
+            with col_range2:
+                selected_max_power = st.number_input("选择战力分析范围 - 最大值:",
+                                                     min_value=selected_min_power, max_value=max_power,  # 确保最大值不小于最小值
+                                                     value=max_power, key="an4_max_power")
+
+            if selected_min_power >= selected_max_power:
+                st.warning("战力范围最大值必须大于最小值。")
+            else:
+                default_step = max(1, int((selected_max_power - selected_min_power) / 10))  # 默认步长
+                step_power = st.number_input("指定战力区间步长:",
+                                             min_value=1,
+                                             value=default_step,
+                                             key="an4_step_power")
+
+                # 生成可选的战力子区间
+                power_intervals = []
+                current_interval_start = selected_min_power
+                while current_interval_start < selected_max_power:
+                    current_interval_end = min(current_interval_start + step_power - 1, selected_max_power)  # 区间是闭合的
+                    power_intervals.append((current_interval_start, current_interval_end))
+                    current_interval_start += step_power
+
+                if not power_intervals:
+                    st.info("根据所选范围和步长，未能生成有效的战力子区间。")
+                else:
+                    power_interval_options = [f"{start}-{end}" for start, end in power_intervals]
+                    selected_power_intervals_str = st.multiselect(
+                        "选择要对比的战力子区间:",
+                        options=power_interval_options,
+                        default=power_interval_options[:1] if power_interval_options else [],  # 默认选第一个
+                        key="an4_power_intervals_select"
+                    )
+
+                    if not selected_power_intervals_str:
+                        st.info("请至少选择一个战力子区间进行分析。")
+                    else:
+                        # 准备用于合并的魔王数据 (确保每个 reportId 只有一个魔王)
+                        unique_bosses_for_an4 = current_bosses_df_an2[
+                            [get_col("reportId"), 'boss_fullname_with_tier']].drop_duplicates(
+                            subset=[get_col("reportId")])
+
+                        all_pie_charts_data = []  # 用于存储每个区间的饼图数据
+
+                        for interval_str in selected_power_intervals_str:
+                            start_str, end_str = interval_str.split('-')
+                            interval_min_power = int(start_str)
+                            interval_max_power = int(end_str)
+
+                            # 筛选该战力区间的神将
+                            heroes_in_interval_df = heroes_with_power_df[
+                                (heroes_with_power_df[user_power_col] >= interval_min_power) &
+                                (heroes_with_power_df[user_power_col] <= interval_max_power)
+                                ]
+
+                            if heroes_in_interval_df.empty:
+                                st.write(f"**战力区间 {interval_str}**: 无神将数据。")
+                                continue
+
+                            # 合并魔王数据
+                            merged_interval_hero_boss = pd.merge(
+                                heroes_in_interval_df[[get_col("reportId")]],
+                                unique_bosses_for_an4,
+                                on=get_col("reportId"),
+                                how='inner'
+                            )
+
+                            if merged_interval_hero_boss.empty:
+                                st.write(f"**战力区间 {interval_str}**: 神将未匹配到任何魔王。")
+                                continue
+
+                            boss_counts_in_interval = merged_interval_hero_boss[
+                                'boss_fullname_with_tier'].value_counts().reset_index()
+                            boss_counts_in_interval.columns = ['魔王名称 (含阶)', '匹配次数']
+                            total_matches_in_interval = boss_counts_in_interval['匹配次数'].sum()
+                            boss_counts_in_interval['占比 (%)'] = (
+                                        boss_counts_in_interval['匹配次数'] / total_matches_in_interval * 100).round(2)
+                            boss_counts_in_interval = boss_counts_in_interval.sort_values(by='占比 (%)',
+                                                                                          ascending=False)
+
+                            all_pie_charts_data.append({
+                                'title': f"战力区间 {interval_str} 魔王分布{dynamic_title_suffix}",
+                                'data': boss_counts_for_star  # 修正：应该是 boss_counts_in_interval
+                            })
+                            # 修正为 boss_counts_in_interval
+                            all_pie_charts_data[-1]['data'] = boss_counts_in_interval
+
+                        # 显示饼图 (如果只选一个区间，可以放大；多个则并排)
+                            # ... (在 分析四 逻辑中, all_pie_charts_data 准备好之后) ...
+
+                            # 显示饼图 (如果只选一个区间，可以放大；多个则并排)
+                            if all_pie_charts_data:
+                                if len(all_pie_charts_data) == 1:
+                                    chart_info = all_pie_charts_data[0]
+                                    # 获取该区间总匹配数用于显示数据量
+                                    total_matches_for_this_interval = chart_info['data']['匹配次数'].sum()
+
+                                    st.write(
+                                        f"**{chart_info['title'].split('魔王分布')[0].replace('战力区间', '').strip()} 魔王分布**:")  # 简化标题
+                                    fig_power_interval_boss = px.pie(chart_info['data'],
+                                                                     values='占比 (%)', names='魔王名称 (含阶)',
+                                                                     title=chart_info['title'], hole=.3)
+                                    fig_power_interval_boss.update_traces(textposition='inside',
+                                                                          textinfo='percent+label')
+                                    st.plotly_chart(fig_power_interval_boss, use_container_width=True)
+                                    st.caption(f"数据量 (总匹配次数): {total_matches_for_this_interval}")  # 显示数据量
+                                else:  # 多个区间对比，使用列布局
+                                    st.write(f"**已选战力区间魔王分布对比{dynamic_title_suffix}**:")
+                                    num_charts = len(all_pie_charts_data)
+                                    num_cols = min(num_charts, 3)  # 最多3列
+                                    chart_cols = st.columns(num_cols)
+                                    for i, chart_info in enumerate(all_pie_charts_data):
+                                        with chart_cols[i % num_cols]:
+                                            # 获取该区间总匹配数用于显示数据量
+                                            total_matches_for_this_interval = chart_info['data']['匹配次数'].sum()
+
+                                            st.write(
+                                                f"**{chart_info['title'].split('魔王分布')[0].replace('战力区间', '').strip()}**")  # 简化标题
+                                            fig_power_interval_boss = px.pie(chart_info['data'],
+                                                                             values='占比 (%)', names='魔王名称 (含阶)',
+                                                                             title=chart_info['title'], hole=.3,
+                                                                             height=400)
+                                            fig_power_interval_boss.update_traces(textposition='inside',
+                                                                                  textinfo='percent+label', showlegend=(
+                                                            i == 0 and num_charts > 1))  # 多个图时只第一个显示图例
+                                            st.plotly_chart(fig_power_interval_boss, use_container_width=True)
+                                            st.caption(f"数据量: {total_matches_for_this_interval}")  # 显示数据量
+                            else:
+                                st.info("所选战力区间内无有效数据进行魔王分布分析。")
 # ... (后续的探索性分析 Tab 和 筛选后原始数据 Tab) ...
+
+
 
 # with tabs[6]:  # 新的 "探索性分析" Tab 的索引是 6
 #     st.subheader("自由探索性数据分析")
